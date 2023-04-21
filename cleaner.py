@@ -1,28 +1,37 @@
-import os
-import math
-import numpy as np
-import pandas as pd
-from tqdm.auto import tqdm
 from multiprocessing import Pool, cpu_count
 
-#import tensorflow as tf
-#from transformers import BertTokenizer
-#from transformers import TFBertForSequenceClassification
-#from official.nlp import optimization
-
+import demoji
 import ftfy
+import pandas as pd
 from bs4 import BeautifulSoup
-import nltk
+from nltk.tokenize import RegexpTokenizer
 from stopwordsiso import stopwords
-from nltk.tokenize import word_tokenize, RegexpTokenizer
+from tqdm.auto import tqdm
+
+# import tensorflow as tf
+# from transformers import BertTokenizer
+# from transformers import TFBertForSequenceClassification
+# from official.nlp import optimization
+
 
 """# Data preparation
 ### Steps
-* Remove html tags from product attributes
-* Remove mispelling 
-* Since the descriptive text does not contain negative verbs that could change the semantics, the last step is to remove stopwords
+* Rimuovere tag html dagli attributi dei prodotti
+* Rimuovere mispelling 
+* Rimuovere emoji
+* Rimuovere stopwords
 """
 
+"""
+Funzione per eliminare le emoji
+"""
+def remove_emojis(data):
+    dem = demoji.findall(data)
+    for item in dem.keys():
+        data = data.replace(item, '')
+    return data
+
+"""Eliminiamo la colonna del prezzo"""
 def dropUselessColumns(product_df):
     # Rimuovo le colonne che non mi servono
     product_df.drop(['price'], axis=1, inplace=True)
@@ -33,7 +42,6 @@ def remove_tags(html):
     soup = BeautifulSoup(html, "html.parser")
     for data in soup(['style', 'script']):
         data.decompose()
-
     return ' '.join(soup.stripped_strings)
 #Converte una lista in una stringa
 def listToString(s):
@@ -46,7 +54,7 @@ def cleanDataset(product_df):
     stop_words = stopwords(["ja","en","es","it","de","fr"])
     tokenizer = RegexpTokenizer(r'\w+')
     for index in tqdm(range(0, len(product_df))):
-        for col in range(2,7):
+        for col in range(2,10):
             # Eseguo azioni solo sui valori not NaN
             if not (pd.isnull(product_df.iloc[index, col])):
                 # Rimuovo i tag html
@@ -57,9 +65,11 @@ def cleanDataset(product_df):
                 # Rimuovo le stopwords
                 word_tokens = tokenizer.tokenize(product_df.iloc[index, col])
                 product_df.iloc[index, col] = listToString([w for w in word_tokens if not w.lower() in stop_words])
+                # Rimuovo le emojis
+                product_df.iloc[index, col] = remove_emojis(product_df.iloc[index, col])
 
     return product_df
-
+#Implementazione multiprocesso per velocizzare la pulizia del dataset sfruttando i core della cpu
 """# Load Dataset"""
 if __name__ == '__main__':
     train_df = pd.read_csv('datasets/products_train.csv')
