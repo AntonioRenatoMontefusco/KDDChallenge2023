@@ -17,24 +17,35 @@ def get_output_dataset(sessions, products):
         tmp = ""
         for item in sessions["prev_items"][index]:
             product = products.get(item + "" + sessions["locale"][index])
-            if isinstance(product,str) or not np.isnan(product):
+            if isinstance(product, str) or not np.isnan(product):
                 tmp += product + "; "
         next_product = products.get(str(sessions["next_item"][index]) + "" + str(sessions["locale"][index]))
-        outputDataset = outputDataset.append({"items": tmp, "prediction": next_product}, ignore_index=True)
+        new_row = {'items': tmp, 'prediction': next_product}
+        outputDataset = pd.concat([outputDataset, pd.DataFrame([new_row])], ignore_index=True)
     return outputDataset
 
 if __name__ == '__main__':
     sessions = pd.read_csv('datasets/da_cancellare.csv')
     products = to_map(pd.read_csv('datasets/products_train_cleaned.csv'))
 
-    num_processes = cpu_count() * 60 // 100
-    chunk_size = len(sessions) // num_processes
-    chunks = pd.read_csv('datasets/da_cancellare.csv', chunksize=chunk_size)
-    pool = Pool(processes=num_processes)
+    #Single Thread execution
+    output=get_output_dataset(sessions,products)
 
-    get_output_dataset_partial = partial(get_output_dataset, products=products)
-    out_chunks = pool.map(get_output_dataset_partial, chunks)
-    output=pd.concat(out_chunks)
-    output.to_csv("datasets/train.csv",index=False)
+
+    #Multi Thread execution
+    #num_processes = cpu_count() * 60 // 100
+    #chunk_size = len(sessions) // num_processes
+    #chunks = pd.read_csv('datasets/da_cancellare.csv', chunksize=chunk_size)
+    #pool = Pool(processes=num_processes)
+
+    #get_output_dataset_partial = partial(get_output_dataset, products=products)
+
+    #out_chunks = pool.map(get_output_dataset_partial, chunks)
+    #output = pd.concat(out_chunks)
+
+
+
+    #Print Output and make CSV file
+    output.to_csv("datasets/train.csv", index=False)
     print(sessions["prev_items"])
 
