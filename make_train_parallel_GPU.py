@@ -4,7 +4,7 @@ from multiprocessing import Pool, cpu_count
 import ast
 import numpy as np
 from functools import partial
-
+import cudf
 
 def to_map(df):
     df['tmp'] = df['title'] + " " + df['brand'].fillna("")
@@ -26,7 +26,7 @@ def get_output_dataset(sessions, products):
     return outputDataset
 
 if __name__ == '__main__':
-    sessions = pd.read_csv('datasets/da_cancellare.csv')
+    sessions = pd.read_csv('datasets/sessions_train.csv')
     products = to_map(pd.read_csv('datasets/products_train_cleaned.csv'))
 
     #Single Thread execution
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     # Multi Thread execution
     num_processes = cpu_count() * 60 // 100
     chunk_size = len(sessions) // num_processes
-    chunks = pd.read_csv('datasets/da_cancellare.csv', chunksize=chunk_size)
+    chunks = pd.read_csv('datasets/sessions_train.csv', chunksize=chunk_size)
     pool = Pool(processes=num_processes)
 
     get_output_dataset_partial = partial(get_output_dataset, products=products)
@@ -47,6 +47,6 @@ if __name__ == '__main__':
 
 
     #Print Output and make CSV file
-    output.to_csv("datasets/test_da_cancellare.csv", index=False)
+    output.to_csv("datasets/train.csv", index=False)
     print(sessions["prev_items"])
 
